@@ -20,16 +20,11 @@ public class Actor{
         }
         this.name = name;
     }
-
-    public boolean containsKeyword(String keyword){
-        if (keyword == null) return false;
-        return this.name.toLowerCase().contains(keyword.toLowerCase());
-    }
-    public void changeName(String newName){
+    public void changeName(String name){
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("이름은 필수입니다.");
         }
-        this.name = newName;
+        this.name = name;
     }
 
     public void setId(Long id){

@@ -19,11 +19,6 @@ public class Director{
         }
         this.name = name;   
     }
-    public boolean containsKeyword(String keyword){
-        if (keyword == null) return false;//굳이 예외처리 ㄴㄴ 검색이니깐
-        return this.name.toLowerCase().contains(keyword.toLowerCase());
-    }
-
     public void changeName(String name){
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("이름은 필수입니다.");
