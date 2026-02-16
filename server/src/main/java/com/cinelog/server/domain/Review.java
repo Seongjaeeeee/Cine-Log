@@ -33,9 +33,9 @@ public class Review {
     public static Review reconstitute(Long id, String content, Integer rating, User user, Movie movie) {//db에서 객체 가져오기위한 메서드임
         Review review = new Review(content, rating, user, movie);
         review.setId(id);
-        return review; // movie.addRating()을 호출하지 않음
+        return review; 
     }   
-    
+
     public void update(String content,Integer rating){
         if(rating==null||rating>5||rating<1)throw new IllegalArgumentException("별점이 올바르지 않습니다.");
         this.content = content;
