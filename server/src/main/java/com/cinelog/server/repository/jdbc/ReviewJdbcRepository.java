@@ -19,7 +19,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public class ReviewJdbcRepository implements ReviewRepository {
     
     private final SimpleJdbcInsert jdbcInsert;
@@ -67,20 +69,35 @@ public class ReviewJdbcRepository implements ReviewRepository {
     }
 
     @Override
-    public List<Review> findByUser(User user) {
+    public List<Review> findByUserId(Long id) {
         String sql = "SELECT r.*, m.name as movie_name, m.director_id, d.name as director_name, u.user_name " +
                      "FROM reviews r " +
                      "JOIN movies m ON r.movie_id = m.id " +
                      "JOIN directors d ON m.director_id = d.id " +
                      "JOIN users u ON r.user_id = u.id " +
                      "WHERE r.user_id = :userId";
-        return jdbcTemplate.query(sql, Map.of("userId", user.getId()), reviewRowMapper());
+        return jdbcTemplate.query(sql, Map.of("userId", id), reviewRowMapper());
+    }
+
+    @Override
+    public boolean existsByUserIdAndMovieId(Long userId,Long movieId){
+        String sql = "SELECT COUNT(*) FROM reviews WHERE user_id = :userId AND movie_id = :movieId";
+        Integer results = jdbcTemplate.queryForObject(sql, Map.of("userId", userId,"movieId",movieId), Integer.class);
+        return results != null && results>0;
     }
     @Override
     public boolean delete(Long id) {
         String sql = "DELETE FROM reviews WHERE id = :id";
         int affectedRows = jdbcTemplate.update(sql, Map.of("id", id));
         return affectedRows > 0;
+    }
+
+    @Override
+    public Double calculateAverageRatingByMovieId(Long movieId){
+        String sql = "SELECT ROUND(COALESCE(AVG(rating), 0.0), 1) FROM reviews WHERE movie_id = :movieId";
+    
+        return jdbcTemplate.queryForObject(sql, Map.of("movieId", movieId), Double.class);
+
     }
 
     private Review insert(Review review) {
@@ -106,7 +123,7 @@ public class ReviewJdbcRepository implements ReviewRepository {
         return review;
     }
 
-    private RowMapper<Review> reviewRowMapper() {
+    private RowMapper<Review> reviewRowMapper() {//maprow라는 RowMapper 함수형 인터페이스 메서드를 구현하는 람다 리턴
         return (rs, rowNum) -> {
             User user = new User(rs.getString("user_name"), "PROTECTED_PASSWORD");
             user.setId(rs.getLong("user_id"));

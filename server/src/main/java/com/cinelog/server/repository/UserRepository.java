@@ -8,4 +8,5 @@ public interface UserRepository {
     public User save(User user);
     public boolean existsByName(String name);
     public Optional<User> findByName(String name);
+    public Optional<User> findById(Long id);
 }

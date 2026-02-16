@@ -40,15 +40,25 @@ public class UserJdbcRepository implements UserRepository {
     }
     @Override
     public boolean existsByName(String name) {
-        String sql = "SELECT COUNT(*) FROM users WHERE user_name = :userName";
+        String sql = "SELECT COUNT(*) FROM users WHERE user_name = :userName AND deleted = false";
         Integer count = jdbcTemplate.queryForObject(sql, Map.of("userName", name), Integer.class);
         return count != null && count > 0;
     }
     @Override
     public Optional<User> findByName(String name){
-        String sql = "SELECT * FROM users WHERE user_name = :userName";
+        String sql = "SELECT * FROM users WHERE user_name = :userName AND deleted = false";
         try {
             User user = jdbcTemplate.queryForObject(sql, Map.of("userName", name), userRowMapper());
+            return Optional.ofNullable(user);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+    @Override
+    public Optional<User> findById(Long id){
+        String sql = "SELECT * FROM users WHERE id = :id AND deleted = false";
+        try {
+            User user = jdbcTemplate.queryForObject(sql, Map.of("id", id), userRowMapper());
             return Optional.ofNullable(user);
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
@@ -59,20 +69,22 @@ public class UserJdbcRepository implements UserRepository {
         SqlParameterSource params = new MapSqlParameterSource()
                 .addValue("user_name", user.getName())
                 .addValue("password", user.getPassword())
-                .addValue("role", user.getRole().name());
+                .addValue("role", user.getRole().name())
+                .addValue("deleted", user.isDeleted());
 
         Number key = jdbcInsert.executeAndReturnKey(params);
         user.setId(key.longValue());
         return user;
     }
     private User update(User user){
-        String sql = "UPDATE users SET user_name = :userName, password = :password, role = :role WHERE id = :id";
+        String sql = "UPDATE users SET user_name = :userName, password = :password, role = :role, deleted = :deleted WHERE id = :id";
         
         SqlParameterSource params = new MapSqlParameterSource()
                 .addValue("id", user.getId())
                 .addValue("userName", user.getName())
                 .addValue("password", user.getPassword())
-                .addValue("role", user.getRole().name());
+                .addValue("role", user.getRole().name())
+                .addValue("deleted", user.isDeleted());
 
         int affectedRows = jdbcTemplate.update(sql, params);
         if (affectedRows == 0) {
@@ -86,7 +98,8 @@ public class UserJdbcRepository implements UserRepository {
             User user = new User(
                 rs.getString("user_name"),
                 rs.getString("password"),
-                Role.valueOf(rs.getString("role"))
+                Role.valueOf(rs.getString("role")),
+                rs.getBoolean("deleted")
             );
             user.setId(rs.getLong("id"));
             return user;

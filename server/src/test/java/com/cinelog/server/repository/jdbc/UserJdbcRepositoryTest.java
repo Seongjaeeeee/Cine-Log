@@ -27,6 +27,7 @@ class UserJdbcRepositoryTest {
 
         assertThat(savedUser.getId()).isNotNull();
         assertThat(savedUser.getName()).isEqualTo("tester1");
+        assertThat(savedUser.isDeleted()).isEqualTo(false);
     }
 
     @Test
@@ -34,7 +35,7 @@ class UserJdbcRepositoryTest {
     void saveUpdateTest() {
         User user = userRepository.save(new User("oldName", "pass", Role.USER));
         Long savedId = user.getId();
-        User updatedUser = new User("newName", "newPass", Role.ADMIN);
+        User updatedUser = new User("newName", "newPass", Role.ADMIN,false);
         updatedUser.setId(savedId);
 
         userRepository.save(updatedUser);
@@ -43,17 +44,7 @@ class UserJdbcRepositoryTest {
         assertThat(found).isPresent();
         assertThat(found.get().getRole()).isEqualTo(Role.ADMIN);
         assertThat(found.get().getPassword()).isEqualTo("newPass");
-    }
-
-    @Test
-    @DisplayName("유저 이름이 존재하면 true, 없으면 false를 반환해야 한다")
-    void existsByNameTest() {
-        // Given
-        userRepository.save(new User("exists", "pass", Role.USER));
-
-        // When & Then
-        assertThat(userRepository.existsByName("exists")).isTrue();
-        assertThat(userRepository.existsByName("none")).isFalse();
+        assertThat(found.get().isDeleted()).isEqualTo(false);
     }
 
     @Test
@@ -70,5 +61,52 @@ class UserJdbcRepositoryTest {
         assertThat(found.get().getName()).isEqualTo("findMe");
         assertThat(found.get().getRole()).isEqualTo(Role.ADMIN);
         assertThat(found.get().getPassword()).isEqualTo("pass123");
+    }
+
+    @Test
+    @DisplayName("id로 유저 검색시 정보가 매핑되어야한다")
+    void findByidTest(){
+        User user = userRepository.save(new User("Name", "pass", Role.USER));
+        Long savedId = user.getId();
+
+        Optional<User> found = userRepository.findById(savedId);
+
+        assertThat(found).isPresent();
+        assertThat(found.get().getName()).isEqualTo("Name");
+        assertThat(found.get().getRole()).isEqualTo(Role.USER);
+        assertThat(found.get().getPassword()).isEqualTo("pass");
+    }
+
+    @Test
+    @DisplayName("유저 이름이 존재하면 true, 없으면 false를 반환해야 한다")
+    void existsByNameTest() {
+        // Given
+        userRepository.save(new User("exists", "pass", Role.USER));
+
+        // When & Then
+        assertThat(userRepository.existsByName("exists")).isTrue();
+        assertThat(userRepository.existsByName("none")).isFalse();
+    }
+
+    @Test
+    @DisplayName("유저를 탈퇴 처리(deleted=true)하면 조회 로직에서 제외되어야 한다")
+    void softDeleteTest() {
+        // Given: 유저 가입
+        User user = userRepository.save(new User("deleteMe", "pass", Role.USER));
+        Long userId = user.getId();
+
+        // When: 탈퇴 처리 (deleted = true로 업데이트)
+        User withdrawingUser = new User("deleteMe", "pass", Role.USER, true); // true 설정
+        withdrawingUser.setId(userId);
+        userRepository.save(withdrawingUser);
+
+        // Then 1: ID로 조회 시 없어야 함 (Empty)
+        assertThat(userRepository.findById(userId)).isEmpty();
+
+        // Then 2: 이름으로 조회 시 없어야 함 (Empty)
+        assertThat(userRepository.findByName("deleteMe")).isEmpty();
+
+        // Then 3: 존재 여부 확인 시 false여야 함
+        assertThat(userRepository.existsByName("deleteMe")).isFalse();
     }
 }

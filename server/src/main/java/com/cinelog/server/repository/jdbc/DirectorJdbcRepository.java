@@ -17,10 +17,10 @@ import org.springframework.stereotype.Repository;
 import com.cinelog.server.domain.Director;
 import com.cinelog.server.repository.DirectorRepository;
 @Repository
-public class DirectorjdbcRepository implements DirectorRepository{
+public class DirectorJdbcRepository implements DirectorRepository{
     private final NamedParameterJdbcTemplate jdbcTemplate;//-> update는 cud에사용 query는 r에 사용
     private final SimpleJdbcInsert jdbcInsert;
-    public DirectorjdbcRepository(DataSource dataSource) {
+    public DirectorJdbcRepository(DataSource dataSource) {
         this.jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);//이름으로 sql문과 매핑하도록 해줌
         this.jdbcInsert = new SimpleJdbcInsert(dataSource)//인서트문 자동생성
                 .withTableName("directors")

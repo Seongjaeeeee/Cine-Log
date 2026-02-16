@@ -1,12 +1,10 @@
 package com.cinelog.server.repository;
 
-import com.cinelog.server.domain.Movie;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.stereotype.Repository;
+import com.cinelog.server.domain.Movie;
 
-@Repository
 public interface MovieRepository {
 	public Movie save(Movie movie);
 	public Optional<Movie> findById(Long id);
@@ -16,5 +14,6 @@ public interface MovieRepository {
 	public List<Movie> findAllByNameContaining(String keyword);
     public List<Movie> findAllByActorNameContaining(String keyword);
     public List<Movie> findAllByDirectorNameContaining(String keyword);
+	public Integer countByDirectorId(Long id);
 	public boolean delete(Long id);
 }

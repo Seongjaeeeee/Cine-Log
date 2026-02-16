@@ -17,15 +17,16 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cinelog.server.domain.Actor;
-import com.cinelog.server.domain.BasicRatingPolicy;
 import com.cinelog.server.domain.Director;
 import com.cinelog.server.domain.Genre;
 import com.cinelog.server.domain.Movie;
 import com.cinelog.server.repository.MovieRepository;
 
+@Repository
 public class MovieJdbcRepository implements MovieRepository{
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
@@ -140,14 +141,17 @@ public class MovieJdbcRepository implements MovieRepository{
         return jdbcTemplate.query(sql, Map.of("keyword", likeKeyword), movieResultSetExtractor());
     }
 
+    @Override
+    public Integer countByDirectorId(Long id){
+        String sql = "SELECT count(*) FROM movies WHERE director_id = :id";
+        Map<String, Object> params = Map.of("id", id);
+        return jdbcTemplate.queryForObject(sql, params, Integer.class);
+    }
+
 	@Override
     @Transactional
     public boolean delete(Long id) {
-        //연관된 관계 데이터(movie_actor)를 먼저 삭제
-        String deleteRelationSql = "DELETE FROM movie_actor WHERE movie_id = :movieId";
-        jdbcTemplate.update(deleteRelationSql, Map.of("movieId", id));
-
-        //실제 영화 데이터를 삭제합니다.
+        //실제 영화 데이터를 삭제 -> 관계테이블은 cascade설정
         String deleteMovieSql = "DELETE FROM movies WHERE id = :id";
         int affectedRows = jdbcTemplate.update(deleteMovieSql, Map.of("id", id));
 
@@ -161,8 +165,7 @@ public class MovieJdbcRepository implements MovieRepository{
                 .addValue("genre", movie.getGenre().name()) // Enum을 String으로 저장
                 .addValue("description", movie.getDescription())
                 .addValue("release_date", movie.getReleaseDate())
-                .addValue("rating", movie.getRating())
-                .addValue("rating_policy_type", movie.getRatingPolicyType());
+                .addValue("rating", movie.getRating());
 
         Number key = jdbcInsert.executeAndReturnKey(params);
         movie.setId(key.longValue());
@@ -178,8 +181,7 @@ public class MovieJdbcRepository implements MovieRepository{
                      "genre = :genre, " +
                      "description = :description, " +
                      "release_date = :releaseDate, " +
-                     "rating = :rating, " +
-                     "rating_policy_type = :ratingPolicyType " +
+                     "rating = :rating " +
                      "WHERE id = :id";
 
         SqlParameterSource params = new MapSqlParameterSource()
@@ -189,8 +191,7 @@ public class MovieJdbcRepository implements MovieRepository{
                 .addValue("genre", movie.getGenre().name())
                 .addValue("description", movie.getDescription())
                 .addValue("releaseDate", movie.getReleaseDate())
-                .addValue("rating", movie.getRating())
-                .addValue("ratingPolicyType", movie.getRatingPolicyType());
+                .addValue("rating", movie.getRating());
 
         jdbcTemplate.update(sql, params);
 
@@ -239,25 +240,10 @@ public class MovieJdbcRepository implements MovieRepository{
             new ArrayList<>() 
         );
         movie.setId(rs.getLong("id"));
-        // 3. Rating 및 Policy 복원
-        setRatingAndPolicy(movie, rs.getDouble("rating"), rs.getString("rating_policy_type"));
+        // 3. [변경] 평점 매핑
+        movie.setRating(rs.getDouble("rating"));
         return movie;
         //여기서 actors처리 안하는 이유  ->  n+1문제... findAll할시에 전체 쿼리+배우와의 관계에 대한 n번의 쿼리가 더 나감 
-    }
-    private void setRatingAndPolicy(Movie movie, Double rating, String policyType) {
-        // DB의 문자열을 보고 실제 정책 객체를 생성하여 주입
-        try {
-            var ratingField = Movie.class.getDeclaredField("rating");//reflection사용
-            ratingField.setAccessible(true);
-            ratingField.set(movie, rating);
-
-            if ("BASIC".equals(policyType)) {
-                movie.changeRatingPolicy(new BasicRatingPolicy());
-            } 
-            // 추가 정책이 있다면 여기에 확장 -> ocp위반아닌가? 추후수정
-        } catch (Exception e) {
-            throw new RuntimeException("도메인 모델 복원 중 오류 발생", e);
-        }
     }
 
     //ResultSetExtractor
@@ -288,5 +274,5 @@ public class MovieJdbcRepository implements MovieRepository{
         };
     }
 }
-//save update delete 시에는 actors-movies의 관계엔티티고려
+//save update delete(cascade) 시에는 actors-movies의 관계엔티티고려
 //조회시에는 rowmapper로 매핑하는것 뿐만아니라 actor도 같이 처리해서 movie객체에 출연한 모든 actor들을 넣어줘야함

@@ -57,7 +57,7 @@ public class ActorJdbcRepository implements ActorRepository{
         return jdbcTemplate.query(sql,Map.of("keyword",likeKeyword),actorMapper);
     }
     @Override
-    public boolean delete(Long id){
+    public boolean delete(Long id){//관계테이블 삭제는 cascade로 설정
         String sql = "DELETE FROM actors WHERE id = :id";
         int affectedRows = jdbcTemplate.update(sql,Map.of("id",id));
         return affectedRows>0;
@@ -78,8 +78,8 @@ public class ActorJdbcRepository implements ActorRepository{
     }
 
     private final RowMapper<Actor> actorMapper = (rs, rowNum) -> {
-    Actor actor = new Actor(rs.getString("name"));
-    actor.setId(rs.getLong("id"));
-    return actor;
+        Actor actor = new Actor(rs.getString("name"));
+        actor.setId(rs.getLong("id"));
+        return actor;
     };
 }

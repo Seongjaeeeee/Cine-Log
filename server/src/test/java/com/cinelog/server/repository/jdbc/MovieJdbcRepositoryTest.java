@@ -20,13 +20,13 @@ import com.cinelog.server.domain.Genre;
 import com.cinelog.server.domain.Movie;
 
 @JdbcTest
-@Import({MovieJdbcRepository.class, DirectorjdbcRepository.class, ActorJdbcRepository.class})// 테스트 셋업을 위해 배우/감독 레포지토리도 함께사용
+@Import({MovieJdbcRepository.class, DirectorJdbcRepository.class, ActorJdbcRepository.class})// 테스트 셋업을 위해 배우/감독 레포지토리도 함께사용
 class MovieJdbcRepositoryTest {
 
     @Autowired
     private MovieJdbcRepository movieRepository;
     @Autowired
-    private DirectorjdbcRepository directorRepository;
+    private DirectorJdbcRepository directorRepository;
     @Autowired
     private ActorJdbcRepository actorRepository;
         
@@ -60,8 +60,6 @@ class MovieJdbcRepositoryTest {
         assertThat(foundMovie.getActors()).hasSize(2)//배우 저장 확인
                 .extracting("name")
                 .containsExactlyInAnyOrder("송강호", "최우식");
-
-        assertThat(foundMovie.getRatingPolicyType()).isEqualTo("BASIC");//정책 저장 확인
     }
 
     @Test
@@ -118,7 +116,6 @@ class MovieJdbcRepositoryTest {
         assertThat(found.get().getActors()).hasSize(1);
         assertThat(found.get().getActors().get(0).getName()).isEqualTo("킬리언 머피");
         assertThat(found.get().getGenre()).isEqualTo(Genre.DRAMA);
-        assertThat(found.get().getRatingPolicyType()).isEqualTo("BASIC");
     }
 
     @Test
@@ -250,7 +247,23 @@ class MovieJdbcRepositoryTest {
         // '조승우'로 검색했어도 함께 출연한 '김윤석'까지 리스트에 있어야 함 (ResultSetExtractor 검증)
         assertThat(found.getActors()).extracting("name").contains("조승우", "김윤석");
     }
-    
+
+    @Test
+    @DisplayName("특정 감독의 영화 개수를 조회할 때, 해당 감독이 참여한 영화의 총합을 정확히 반환해야 한다")
+    void countByDirectorIdTest() {
+        // Given
+        Director d1 = directorRepository.save(new Director("봉준호"));
+        Director d2 = directorRepository.save(new Director("박찬욱"));
+        movieRepository.save(new Movie("기생충", d1, Genre.DRAMA, LocalDate.now(), "", List.of()));
+        movieRepository.save(new Movie("설국열차", d1, Genre.ACTION, LocalDate.now(), "", List.of()));
+
+        Integer bongCount = movieRepository.countByDirectorId(d1.getId());
+        Integer parkCount = movieRepository.countByDirectorId(d2.getId());
+
+        assertThat(bongCount).isEqualTo(2);
+        assertThat(parkCount).isEqualTo(0);
+    }
+
     @Test
     @DisplayName("영화를 삭제하면 연관 테이블(movie_actor) 데이터도 함께 삭제되어야 한다")
     void deleteTest() {

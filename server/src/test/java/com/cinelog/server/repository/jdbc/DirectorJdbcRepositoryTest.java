@@ -13,11 +13,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @JdbcTest
-@Import(DirectorjdbcRepository.class)
+@Import(DirectorJdbcRepository.class)
 class DirectorJdbcRepositoryTest {
 
     @Autowired
-    private DirectorjdbcRepository directorRepository;
+    private DirectorJdbcRepository directorRepository;
 
     @Test
     @DisplayName("새로운 감독을 저장하면 고유 ID가 발급되어야 한다")
