@@ -28,30 +28,21 @@ public class Review {
     public static Review create(String content, Integer rating, User user, Movie movie) {//정적 팩토리 메서드
         if(rating==null||rating>5||rating<1||user==null||movie==null)throw new IllegalArgumentException("리뷰 생성을 위한 인자가 적절하지 않습니다.");
         Review review = new Review(content, rating, user, movie);
-        movie.addRating(rating);
         return review;
     }
     public static Review reconstitute(Long id, String content, Integer rating, User user, Movie movie) {//db에서 객체 가져오기위한 메서드임
         Review review = new Review(content, rating, user, movie);
         review.setId(id);
-        return review; // movie.addRating()을 호출하지 않음!
+        return review; // movie.addRating()을 호출하지 않음
     }   
+    
     public void update(String content,Integer rating){
         if(rating==null||rating>5||rating<1)throw new IllegalArgumentException("별점이 올바르지 않습니다.");
         this.content = content;
-        if(!this.rating.equals(rating)){
-            movie.updateRating(this.rating,rating);
         this.rating = rating;
-        }
-    }
-    public void deleteRating(){
-        movie.deleteRating(rating);
     }
     
-    public boolean hasMovieId(Long id){
-        return Objects.equals(movie.getId(),id);
-    }
-    public boolean isOwner(User user){
+    public boolean isOwner(User user){//권한체크용
         return Objects.equals(this.user,user);
     }
     
