@@ -30,6 +30,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'com.h2database:h2' // H2 콘솔 활성화를 위해 implementation 권장
 
+    implementation 'org.springframework.security:spring-security-crypto'
     // 2. 개발 도구 및 DB 드라이버
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
