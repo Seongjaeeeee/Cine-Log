@@ -46,6 +46,9 @@ public class Review {
         return Objects.equals(this.user,user);
     }
     
+    public Long getMovieId(){
+        return movie.getId();
+    }
     public void setId(Long id){
         this.id=id;
     }
