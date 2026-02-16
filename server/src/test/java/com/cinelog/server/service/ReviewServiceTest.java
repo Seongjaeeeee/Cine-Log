@@ -3,7 +3,6 @@ package com.cinelog.server.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,16 +14,18 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.cinelog.server.domain.Movie;
-import com.cinelog.server.domain.RatingPolicy;
 import com.cinelog.server.domain.Review;
 import com.cinelog.server.domain.User;
 import com.cinelog.server.exception.security.ForbiddenException;
 import com.cinelog.server.repository.ReviewRepository;
+import com.cinelog.server.domain.event.ReviewChangedEvent;
 
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceTest {
@@ -36,7 +37,7 @@ class ReviewServiceTest {
     @Mock
     private UserService userService;
     @Mock
-    private RatingPolicy ratingPolicy; // 인터페이스 Mock
+    private ApplicationEventPublisher eventPublisher;
     @InjectMocks
     private ReviewService reviewService;
 
@@ -56,16 +57,13 @@ class ReviewServiceTest {
         // 2. 유저와 영화 조회 성공
         given(userService.getUserById(userId)).willReturn(mockUser);
         given(movieService.getMovieById(movieId)).willReturn(mockMovie);
-        // 3. 평점 계산 결과 준비
-        double calculatedRating = 4.5;
-        given(ratingPolicy.calculateRating(movieId)).willReturn(calculatedRating);
 
         // When
         reviewService.createReview(content, rating, userId, movieId);
 
         // Then
         verify(reviewRepository).save(any(Review.class));
-        verify(movieService).updateMovieRating(mockMovie, calculatedRating);
+        verify(eventPublisher).publishEvent(any(ReviewChangedEvent.class));
     }
 
     @Test
@@ -83,9 +81,9 @@ class ReviewServiceTest {
         ).isInstanceOf(IllegalArgumentException.class)
          .hasMessage("이미 해당 영화에 대한 리뷰를 작성했습니다.");
 
-        // 검증: 저장이나 평점 계산 로직이 실행되면 안 됨
+        // 검증: 저장이나 이벤트 발생이 실행되면 안 됨
         verify(reviewRepository, never()).save(any());
-        verify(ratingPolicy, never()).calculateRating(anyLong());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     
@@ -127,6 +125,7 @@ class ReviewServiceTest {
         // Given
         Long reviewId = 100L;
         Long userId = 1L;
+        Long movieId = 10L;
         String newContent = "수정된 내용";
         Integer newRating = 4;
 
@@ -136,13 +135,20 @@ class ReviewServiceTest {
         given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
         given(userService.getUserById(userId)).willReturn(owner);
         given(review.isOwner(owner)).willReturn(true);
+        given(review.getMovieId()).willReturn(movieId);
 
         // When
         reviewService.updateReview(newContent, newRating, reviewId, userId);
 
         // Then
-        verify(review).update(newContent, newRating); // 도메인 객체의 update 호출 확인
-        verify(reviewRepository).save(review); // 변경 감지(Dirty Checking) 혹은 명시적 저장
+        verify(review).update(newContent, newRating); 
+        verify(reviewRepository).save(review); 
+        
+        ArgumentCaptor<ReviewChangedEvent> eventCaptor = ArgumentCaptor.forClass(ReviewChangedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        
+        ReviewChangedEvent capturedEvent = eventCaptor.getValue();
+        assertThat(capturedEvent.getMovieId()).isEqualTo(movieId);
     }
 
     @Test
@@ -166,6 +172,7 @@ class ReviewServiceTest {
 
         verify(review, never()).update(any(), any());
         verify(reviewRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
 
@@ -190,6 +197,7 @@ class ReviewServiceTest {
         // Given
         Long reviewId = 100L;
         Long userId = 1L;
+        Long movieId = 10L;
 
         User owner = mock(User.class);
         Review review = mock(Review.class);
@@ -197,12 +205,17 @@ class ReviewServiceTest {
         given(reviewRepository.findById(reviewId)).willReturn(Optional.of(review));
         given(userService.getUserById(userId)).willReturn(owner);
         given(review.isOwner(owner)).willReturn(true);
+        given(review.getMovieId()).willReturn(movieId);
 
         // When
         reviewService.deleteReview(reviewId, userId);
 
         // Then
         verify(reviewRepository).delete(reviewId);
+        
+        ArgumentCaptor<ReviewChangedEvent> eventCaptor = ArgumentCaptor.forClass(ReviewChangedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getMovieId()).isEqualTo(movieId);
     }
 
     @Test
@@ -224,7 +237,7 @@ class ReviewServiceTest {
             reviewService.deleteReview(reviewId, userId)
         ).isInstanceOf(ForbiddenException.class);
 
-        verify(reviewRepository, never()).delete(anyLong());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
 }

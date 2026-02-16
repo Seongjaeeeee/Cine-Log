@@ -2,13 +2,14 @@ package com.cinelog.server.service;
 
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cinelog.server.domain.Movie;
-import com.cinelog.server.domain.RatingPolicy;
 import com.cinelog.server.domain.Review;
 import com.cinelog.server.domain.User;
+import com.cinelog.server.domain.event.ReviewChangedEvent;
 import com.cinelog.server.exception.security.ForbiddenException;
 import com.cinelog.server.repository.ReviewRepository;
 
@@ -18,13 +19,13 @@ public class ReviewService {
     private final MovieService movieService;
     private final UserService userService;
     private final ReviewRepository reviewRepository;
-    private RatingPolicy ratingPolicy;
-
-    public ReviewService(ReviewRepository reviewRepository,MovieService movieService,UserService userService,RatingPolicy ratingPolicy){
+    private final ApplicationEventPublisher eventPublisher;
+    
+    public ReviewService(ReviewRepository reviewRepository,MovieService movieService,UserService userService,ApplicationEventPublisher eventPublisher){
         this.reviewRepository = reviewRepository;
         this.movieService = movieService;
         this.userService = userService;
-        this.ratingPolicy = ratingPolicy;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -35,8 +36,8 @@ public class ReviewService {
         Review review = Review.create(content,rating,user,movie);
 
         reviewRepository.save(review);
-
-        movieService.updateMovieRating(movie,ratingPolicy.calculateRating(movieId));
+        
+        eventPublisher.publishEvent(new ReviewChangedEvent(movieId));
     }
     
     public List<Review> findReviewByMovieId(Long movieId) {//영화 리뷰 보기
@@ -51,15 +52,21 @@ public class ReviewService {
         Review review = getReviewById(reviewId);
         User user = userService.getUserById(userId);
         if(!isReviewOwner(user, review))throw new ForbiddenException("수정할 수 있는 유저가 아닙니다.");
+
         review.update(content,rating);
         reviewRepository.save(review);
+        
+        eventPublisher.publishEvent(new ReviewChangedEvent(review.getMovieId()));
     }
+
     @Transactional
     public void deleteReview(Long reviewId,Long userId){
         Review review = getReviewById(reviewId);
         User user = userService.getUserById(userId);
         if(!isReviewOwner(user, review))throw new ForbiddenException("삭제할 수 있는 유저가 아닙니다.");
         reviewRepository.delete(reviewId);
+
+        eventPublisher.publishEvent(new ReviewChangedEvent(review.getMovieId()));
     }
 
     private boolean isReviewOwner(User user,Review review){
