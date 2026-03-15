@@ -13,7 +13,8 @@ import com.cinelog.server.domain.Genre;
 import com.cinelog.server.domain.Movie;
 import com.cinelog.server.dto.movie.MovieSearchResult;
 import com.cinelog.server.dto.movie.MovieUpdateRequest;
-import com.cinelog.server.exception.movie.MovieNotFoundException;
+import com.cinelog.server.exception.EntityNotFoundException;
+import com.cinelog.server.global.error.ErrorCode;
 import com.cinelog.server.repository.MovieRepository;
 
 @Service
@@ -33,7 +34,7 @@ public class MovieService {
     }//이미 존재하는 영화인지 다른 식별자를 이용해 체크하고 입력하는 방안 고민
    
     public Movie getMovieById(Long id){
-        return movieRepository.findById(id).orElseThrow(()->new MovieNotFoundException(id));
+        return movieRepository.findById(id).orElseThrow(()->new EntityNotFoundException(ErrorCode.MOVIE_NOT_FOUND));
     }
     public List<Movie> findAllMovies(){
         return movieRepository.findAll();
@@ -77,7 +78,7 @@ public class MovieService {
 
     @Transactional
     public void deleteMovie(Long id){
-        if(!movieRepository.delete(id))throw new MovieNotFoundException(id);
+        if(!movieRepository.delete(id))throw new EntityNotFoundException(ErrorCode.MOVIE_NOT_FOUND);
     }
     
     private List<MovieSearchResult> toMovieSearchResult(List<Movie> movies){

@@ -8,7 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.cinelog.server.domain.Actor;
 import com.cinelog.server.dto.actor.ActorSearchResult;
-import com.cinelog.server.exception.actor.ActorNotFoundException;
+import com.cinelog.server.exception.EntityNotFoundException;
+import com.cinelog.server.global.error.ErrorCode;
 import com.cinelog.server.repository.ActorRepository;
 
 @Service
@@ -38,7 +39,7 @@ public class ActorService {
         return actorRepository.findAll();
     }
     public Actor getActorById(Long id){
-        return actorRepository.findById(id).orElseThrow(()->new ActorNotFoundException(id));
+        return actorRepository.findById(id).orElseThrow(()->new EntityNotFoundException(ErrorCode.ACTOR_NOT_FOUND));
     }
 
     @Transactional
@@ -50,6 +51,6 @@ public class ActorService {
 
     @Transactional
     public void deleteActor(Long id){
-        if(!actorRepository.delete(id)) throw new ActorNotFoundException(id);
+        if(!actorRepository.delete(id)) throw new EntityNotFoundException(ErrorCode.ACTOR_NOT_FOUND);
     }
 }

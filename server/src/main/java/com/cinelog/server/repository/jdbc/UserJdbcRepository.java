@@ -1,5 +1,7 @@
 package com.cinelog.server.repository.jdbc;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -45,6 +47,12 @@ public class UserJdbcRepository implements UserRepository {
         return count != null && count > 0;
     }
     @Override
+    public boolean existsByEmail(String email) {
+        String sql = "SELECT COUNT(*) FROM users WHERE email = :email AND deleted = false";
+        Integer count = jdbcTemplate.queryForObject(sql, Map.of("email", email), Integer.class);
+        return count != null && count > 0;
+    }
+    @Override
     public Optional<User> findByName(String name){
         String sql = "SELECT * FROM users WHERE user_name = :userName AND deleted = false";
         try {
@@ -66,23 +74,28 @@ public class UserJdbcRepository implements UserRepository {
     }
 
     private User insert(User user){
+        LocalDateTime now = LocalDateTime.now();
         SqlParameterSource params = new MapSqlParameterSource()
                 .addValue("user_name", user.getName())
                 .addValue("password", user.getPassword())
+                .addValue("email", user.getEmail())
                 .addValue("role", user.getRole().name())
-                .addValue("deleted", user.isDeleted());
+                .addValue("deleted", user.isDeleted())
+                .addValue("created_at",now);
 
         Number key = jdbcInsert.executeAndReturnKey(params);
         user.setId(key.longValue());
+        user.setCreatedAt(now);
         return user;
     }
     private User update(User user){
-        String sql = "UPDATE users SET user_name = :userName, password = :password, role = :role, deleted = :deleted WHERE id = :id";
+        String sql = "UPDATE users SET user_name = :userName, password = :password,email = :email, role = :role, deleted = :deleted WHERE id = :id";
         
         SqlParameterSource params = new MapSqlParameterSource()
                 .addValue("id", user.getId())
                 .addValue("userName", user.getName())
                 .addValue("password", user.getPassword())
+                .addValue("email", user.getEmail())
                 .addValue("role", user.getRole().name())
                 .addValue("deleted", user.isDeleted());
 
@@ -98,10 +111,15 @@ public class UserJdbcRepository implements UserRepository {
             User user = new User(
                 rs.getString("user_name"),
                 rs.getString("password"),
+                rs.getString("email"),
                 Role.valueOf(rs.getString("role")),
                 rs.getBoolean("deleted")
             );
             user.setId(rs.getLong("id"));
+            Timestamp timestamp = rs.getTimestamp("created_at");
+            if (timestamp != null) {
+                user.setCreatedAt(timestamp.toLocalDateTime());
+            }
             return user;
         };
     }

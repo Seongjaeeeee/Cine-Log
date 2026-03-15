@@ -7,6 +7,7 @@ import org.springframework.web.context.annotation.RequestScope;
 
 import com.cinelog.server.dto.user.SessionUser;
 import com.cinelog.server.exception.security.UnAuthorizedException;
+import com.cinelog.server.global.error.ErrorCode;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -33,7 +34,7 @@ public class SessionManager {
     }
 
     public void changeUserName(String name){
-        SessionUser currentUser = getLoginUser().orElseThrow(() -> new UnAuthorizedException("로그인 상태가 아닙니다."));
+        SessionUser currentUser = getLoginUser().orElseThrow(() -> new UnAuthorizedException(ErrorCode.UNAUTHORIZED));
         SessionUser newUser = new SessionUser(currentUser.getId(),name,currentUser.getRole());
         
         HttpSession session = request.getSession(false);

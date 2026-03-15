@@ -125,7 +125,7 @@ public class ReviewJdbcRepository implements ReviewRepository {
 
     private RowMapper<Review> reviewRowMapper() {//maprow라는 RowMapper 함수형 인터페이스 메서드를 구현하는 람다 리턴
         return (rs, rowNum) -> {
-            User user = new User(rs.getString("user_name"), "PROTECTED_PASSWORD");
+            User user = new User(rs.getString("user_name"), "PROTECTED_PASSWORD","PROTECTED EMAIL");
             user.setId(rs.getLong("user_id"));
             Director director = new Director(rs.getString("director_name"));
             director.setId(rs.getLong("director_id"));

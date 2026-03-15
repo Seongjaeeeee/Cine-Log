@@ -8,7 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.cinelog.server.domain.Director;
 import com.cinelog.server.dto.director.DirectorSearchResult;
-import com.cinelog.server.exception.director.DirectorNotFoundException;
+import com.cinelog.server.exception.EntityNotFoundException;
+import com.cinelog.server.global.error.ErrorCode;
 import com.cinelog.server.repository.DirectorRepository;
 import com.cinelog.server.repository.MovieRepository;
 
@@ -40,7 +41,7 @@ public class DirectorService {
         return directorRepository.findAll();
     }
     public Director getDirectorById(Long id){//get은 반드시 가져오는것
-        return directorRepository.findById(id).orElseThrow(()->new DirectorNotFoundException(id));
+        return directorRepository.findById(id).orElseThrow(()->new EntityNotFoundException(ErrorCode.DIRECTOR_NOT_FOUND));
     }
 
     @Transactional
@@ -56,6 +57,6 @@ public class DirectorService {
         if (movieCount > 0) {
             throw new IllegalStateException("해당 감독의 영화가 " + movieCount + "편 존재하여 삭제할 수 없습니다.");
         }
-        if(!directorRepository.delete(id))throw new DirectorNotFoundException(id);
+        if(!directorRepository.delete(id))throw new EntityNotFoundException((ErrorCode.DIRECTOR_NOT_FOUND));
     }
 }
