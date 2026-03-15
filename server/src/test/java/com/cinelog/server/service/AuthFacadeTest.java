@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.cinelog.server.domain.Role;
 import com.cinelog.server.domain.User;
 import com.cinelog.server.dto.user.SessionUser;
+import com.cinelog.server.dto.user.UserResponse;
 import com.cinelog.server.exception.security.UnAuthorizedException;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,33 +37,55 @@ class AuthFacadeTest {
 
     @BeforeEach
     void setUp() {
-        testUser = new User("tester", "encodedPw", Role.USER);
+        testUser = new User("tester", "encodedPw", "email@test.com", Role.USER);
         testUser.setId(1L);
         testSessionUser = new SessionUser(1L, "tester", Role.USER);
     }
 
     @Test
-    @DisplayName("회원가입: UserService.createUser를 호출한다")
+    @DisplayName("회원가입: UserService를 호출하고 결과를 UserResponse로 반환한다")
     void createUser_Success() {
+        // Given
+        given(userService.createUser("new_user", "pw", "email@test.com")).willReturn(testUser);
+
         // When
-        authFacade.createUser("new_user", "pw");
+        UserResponse result = authFacade.createUser("new_user", "pw", "email@test.com");
+
         // Then
-        verify(userService).createUser("new_user", "pw");
+        assertThat(result).isNotNull();
+        assertThat(result.userName()).isEqualTo(testUser.getName());
+        verify(userService).createUser("new_user", "pw", "email@test.com");
     }
-    //createAdmin()은 생략
 
     @Test
-    @DisplayName("로그인 성공: UserService에서 유저를 받아와 세션에 저장한다")
+    @DisplayName("관리자 생성: UserService.createAdmin을 호출하고 결과를 반환한다")
+    void createAdmin_Success() {
+        // Given
+        User adminUser = new User("admin", "pw", "admin@test.com", Role.ADMIN);
+        given(userService.createAdmin("admin", "pw", "admin@test.com")).willReturn(adminUser);
+
+        // When
+        UserResponse result = authFacade.createAdmin("admin", "pw", "admin@test.com");
+
+        // Then
+        assertThat(result.role()).isEqualTo(Role.ADMIN);
+        verify(userService).createAdmin("admin", "pw", "admin@test.com");
+    }
+
+    @Test
+    @DisplayName("로그인 성공: 유저를 조회해 세션에 저장하고 UserResponse를 반환한다")
     void login_Success() {
         // Given
         given(userService.login("tester", "pw")).willReturn(testUser);
 
         // When
-        authFacade.login("tester", "pw");
+        UserResponse result = authFacade.login("tester", "pw");
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result.userName()).isEqualTo("tester");
         verify(userService).login("tester", "pw");
-        verify(sessionManager).saveLoginUser(any(SessionUser.class));//세션 유저로 변환해 저장했는지 확인
+        verify(sessionManager).saveLoginUser(any(SessionUser.class)); // 세션 저장 확인
     }
 
     @Test
@@ -73,42 +96,73 @@ class AuthFacadeTest {
     }
 
     @Test
-    @DisplayName("이름 변경 성공: DB 업데이트 후 세션 정보도 동기화한다")
-    void updateUserName_Success() {
+    @DisplayName("내 정보 조회: 세션 ID로 UserService를 조회하여 반환한다")
+    void getMeById_Success() {
         // Given
         given(sessionManager.getLoginUser()).willReturn(Optional.of(testSessionUser));
-        String newName = "new_tester";
+        given(userService.getUserById(1L)).willReturn(testUser);
 
         // When
-        authFacade.updateUserName(newName);
+        UserResponse result = authFacade.getMeById();
 
         // Then
-        // 1. DB 업데이트 호출 (ID와 새 이름 전달)
-        verify(userService).updateUserName(newName, 1L);
-        // 2. 세션 업데이트 호출 
-        verify(sessionManager).changeUserName(newName);
+        assertThat(result.id()).isEqualTo(1L);
+        verify(userService).getUserById(1L);
     }
 
     @Test
-    @DisplayName("비밀번호 변경 성공: DB 업데이트 후 보안을 위해 로그아웃 처리한다")
+    @DisplayName("이름 변경: DB 업데이트 후 세션 정보를 동기화하고 결과를 반환한다")
+    void updateUserName_Success() {
+        // Given
+        String newName = "new_tester";
+        User updatedUser = new User(newName, "pw", "email", Role.USER); 
+        given(sessionManager.getLoginUser()).willReturn(Optional.of(testSessionUser));
+        given(userService.updateUserName(newName, 1L)).willReturn(updatedUser);
+
+        // When
+        UserResponse result = authFacade.updateUserName(newName);
+
+        // Then
+        assertThat(result.userName()).isEqualTo(newName); // 바뀐 이름이 반환되는지 확인
+        verify(userService).updateUserName(newName, 1L);
+        verify(sessionManager).changeUserName(newName); // 세션 동기화 확인
+    }
+
+    @Test
+    @DisplayName("비밀번호 변경: DB 업데이트 후 보안을 위해 로그아웃 처리한다")
     void updatePassword_Success() {
         // Given
         given(sessionManager.getLoginUser()).willReturn(Optional.of(testSessionUser));
-        String currentPw = "oldPw";
-        String newPw = "newPw";
+        given(userService.updatePassword("old", "new", 1L)).willReturn(testUser);
 
         // When
-        authFacade.updatePassword(currentPw, newPw);
+        authFacade.updatePassword("old", "new");
 
         // Then
-        // 1. DB 비밀번호 변경 호출
-        verify(userService).updatePassword(currentPw, newPw, 1L);
-        // 2. 로그아웃 호출 
-        verify(sessionManager).logout();
+        verify(userService).updatePassword("old", "new", 1L);
+        verify(sessionManager).logout(); // 로그아웃 호출 확인
     }
 
     @Test
-    @DisplayName("회원 탈퇴 성공: 유저 비활성화 후 로그아웃 처리한다")
+    @DisplayName("이메일 변경: DB 업데이트를 호출하고 결과를 반환한다")
+    void updateEmail_Success() {
+        // Given
+        String newEmail = "new@email.com";
+        User updatedUser = new User("tester", "pw", newEmail, Role.USER);
+
+        given(sessionManager.getLoginUser()).willReturn(Optional.of(testSessionUser));
+        given(userService.updateEmail(newEmail, 1L)).willReturn(updatedUser);
+
+        // When
+        UserResponse result = authFacade.updateEmail(newEmail);
+
+        // Then
+        assertThat(result.email()).isEqualTo(newEmail);
+        verify(userService).updateEmail(newEmail, 1L);
+    }
+
+    @Test
+    @DisplayName("회원 탈퇴: 유저 삭제 로직 호출 후 로그아웃 처리한다")
     void deleteUser_Success() {
         // Given
         given(sessionManager.getLoginUser()).willReturn(Optional.of(testSessionUser));
@@ -135,25 +189,20 @@ class AuthFacadeTest {
     }
 
     @Test
-    @DisplayName("유저 조회 실패: 로그인하지 않은 상태에서 유저 정보 요청 시 예외 발생")
+    @DisplayName("유저 조회 실패: 로그인하지 않은 상태에서 유저 정보 요청 시 예외가 발생한다")
     void getUser_Fail_NotLoggedIn() {
         // Given
-        given(sessionManager.getLoginUser()).willReturn(Optional.empty());
+        given(sessionManager.getLoginUser()).willReturn(Optional.empty()); // 세션 비어있음
 
         // When & Then
         assertThatThrownBy(() -> authFacade.getUser())
                 .isInstanceOf(UnAuthorizedException.class)
                 .hasMessage("로그인 되지 않았습니다.");
     }
-    
+
     @Test
-    @DisplayName("로그인 상태 체크: 세션 매니저의 결과를 그대로 반환한다")
     void isLoggedIn_Check() {
-        // Given
         given(sessionManager.isLoggedIn()).willReturn(true);
-        // When
-        boolean result = authFacade.isLoggedIn();
-        // Then
-        assertThat(result).isTrue();
+        assertThat(authFacade.isLoggedIn()).isTrue();
     }
 }

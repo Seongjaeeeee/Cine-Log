@@ -40,7 +40,7 @@ class ReviewJdbcRepositoryTest {
 
     @BeforeEach
     void setUp() {// 리뷰 저장을 위해 필수적인 User와 Movie를 미리 저장합니다.
-        testUser = userRepository.save(new User("tester", "password123"));
+        testUser = userRepository.save(new User("tester", "password123","email"));
         
         Director director = directorRepository.save(new Director("봉준호"));
         testMovie = movieRepository.save(new Movie(
@@ -117,7 +117,7 @@ class ReviewJdbcRepositoryTest {
     @DisplayName("특정 영화의 ID로 해당 영화에 달린 모든 리뷰를 가져와야 한다")
     void findByMovieIdTest() {
         // Given
-        User otherUser = userRepository.save(new User("other_user", "password"));
+        User otherUser = userRepository.save(new User("other_user", "password","email"));
         reviewRepository.save(Review.create("리뷰1", 4, testUser, testMovie));
         reviewRepository.save(Review.create("리뷰2", 5, otherUser, testMovie));
 
@@ -139,7 +139,7 @@ class ReviewJdbcRepositoryTest {
         Movie testMovie2 = movieRepository.save(new Movie(
             "기생충2", director, Genre.DRAMA, LocalDate.now(), "설명", new ArrayList<>()
         ));
-        User otherUser = userRepository.save(new User("other_user", "password"));
+        User otherUser = userRepository.save(new User("other_user", "password","email"));
         Long savedId = testUser.getId();
         reviewRepository.save(Review.create("너무 재밌어요!", 5, testUser, testMovie));
         reviewRepository.save(Review.create("또 보고 싶네요.", 4, testUser, testMovie2));
@@ -161,7 +161,7 @@ class ReviewJdbcRepositoryTest {
     @DisplayName("유저 id와 영화 id로 존재하는 리뷰가 있는지 찾아낸다")
     void existsByUserIdAndMovieIdTest() {
         // Given
-        User otherUser = userRepository.save(new User("other_user", "password"));
+        User otherUser = userRepository.save(new User("other_user", "password","email"));
         Long userId = testUser.getId();
         Long otherId = otherUser.getId();
         Long movieId = testMovie.getId();

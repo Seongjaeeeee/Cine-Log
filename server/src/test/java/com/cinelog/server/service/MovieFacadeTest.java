@@ -24,9 +24,7 @@ import com.cinelog.server.domain.Actor;
 import com.cinelog.server.domain.Director;
 import com.cinelog.server.domain.Genre;
 import com.cinelog.server.domain.Movie;
-import com.cinelog.server.exception.actor.ActorNotFoundException;
-import com.cinelog.server.exception.director.DirectorNotFoundException;
-import com.cinelog.server.exception.movie.MovieNotFoundException;
+import com.cinelog.server.exception.EntityNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MovieFacade 오케스트레이션 테스트")
@@ -84,12 +82,12 @@ class MovieFacadeTest {
         // Given
         Long invalidDirectorId = 999L;
         given(directorService.getDirectorById(invalidDirectorId))
-                .willThrow(new DirectorNotFoundException(invalidDirectorId));
+                .willThrow(EntityNotFoundException.class);
 
         // When & Then
         assertThatThrownBy(() -> 
             movieFacade.createMovie("제목", Genre.DRAMA, LocalDate.now(), "설명", invalidDirectorId)
-        ).isInstanceOf(DirectorNotFoundException.class);
+        ).isInstanceOf(EntityNotFoundException.class);
         // 예외가 발생했으므로 배우 조회나 영화 생성은 절대 실행되면 안 됨 (Fail-Fast)
         verify(actorService, never()).getActorById(anyLong());
         verify(movieService, never()).createMovie(any(), any(), any(), any(), any(), any());
@@ -107,12 +105,12 @@ class MovieFacadeTest {
         given(directorService.getDirectorById(directorId)).willReturn(new Director("봉준호"));
         given(actorService.getActorById(existingActorId)).willReturn(new Actor("송강호"));
         given(actorService.getActorById(unknownActorId))
-                .willThrow(new ActorNotFoundException(unknownActorId));
+                .willThrow(EntityNotFoundException.class);
 
         // When & Then
         assertThatThrownBy(() -> 
             movieFacade.createMovie("제목", Genre.DRAMA, LocalDate.now(), "설명", directorId, actorIds)
-        ).isInstanceOf(ActorNotFoundException.class);
+        ).isInstanceOf(EntityNotFoundException.class);
         // 검증: 영화 생성 서비스는 절대 호출되면 안 됨
         verify(movieService, never()).createMovie(any(), any(), any(), any(), any(), any());
     }
@@ -145,12 +143,12 @@ class MovieFacadeTest {
         Long invalidDirectorId = 999L;
         given(movieService.getMovieById(movieId)).willReturn(mock(Movie.class));
         given(directorService.getDirectorById(invalidDirectorId))
-                .willThrow(new DirectorNotFoundException(invalidDirectorId));
+                .willThrow(EntityNotFoundException.class);
 
         // When & Then
         assertThatThrownBy(() -> 
             movieFacade.updateMovieDirector(movieId, invalidDirectorId)
-        ).isInstanceOf(DirectorNotFoundException.class);
+        ).isInstanceOf(EntityNotFoundException.class);
         verify(movieService, never()).updateMovieDirector(any(), any());
     }
 
@@ -185,12 +183,12 @@ class MovieFacadeTest {
 
         given(movieService.getMovieById(movieId)).willReturn(mock(Movie.class));
         given(actorService.getActorById(invalidActorId))
-                .willThrow(new ActorNotFoundException(invalidActorId));
+                .willThrow(EntityNotFoundException.class);
 
         // When & Then
         assertThatThrownBy(() -> 
             movieFacade.addActorToMovie(movieId, invalidActorId)
-        ).isInstanceOf(ActorNotFoundException.class);
+        ).isInstanceOf(EntityNotFoundException.class);
 
         verify(movieService, never()).addActorToMovie(any(), any());
     }
@@ -225,12 +223,12 @@ class MovieFacadeTest {
         Long actorId = 10L;
 
         given(movieService.getMovieById(invalidMovieId))
-                .willThrow(new MovieNotFoundException(invalidMovieId));
+                .willThrow(EntityNotFoundException.class);
 
         // When & Then
         assertThatThrownBy(() -> 
             movieFacade.removeActorFromMovie(invalidMovieId, actorId)
-        ).isInstanceOf(MovieNotFoundException.class);
+        ).isInstanceOf(EntityNotFoundException.class);
 
         verify(actorService, never()).getActorById(anyLong());
         verify(movieService, never()).removeActorFromMovie(any(), any());

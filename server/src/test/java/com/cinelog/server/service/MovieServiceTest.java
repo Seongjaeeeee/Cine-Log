@@ -17,7 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.cinelog.server.domain.Actor;
 import com.cinelog.server.domain.Director;
@@ -25,7 +24,7 @@ import com.cinelog.server.domain.Genre;
 import com.cinelog.server.domain.Movie;
 import com.cinelog.server.dto.movie.MovieSearchResult;
 import com.cinelog.server.dto.movie.MovieUpdateRequest;
-import com.cinelog.server.exception.movie.MovieNotFoundException;
+import com.cinelog.server.exception.EntityNotFoundException;
 import com.cinelog.server.repository.MovieRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -79,7 +78,7 @@ class MovieServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> movieService.getMovieById(invalidId))
-                .isInstanceOf(MovieNotFoundException.class);
+                .isInstanceOf(EntityNotFoundException.class);
     }
 
     @Test
@@ -261,7 +260,7 @@ class MovieServiceTest {
         given(movieRepository.delete(id)).willReturn(false);
     
         assertThatThrownBy(() -> movieService.deleteMovie(id))
-                .isInstanceOf(MovieNotFoundException.class);
+                .isInstanceOf(EntityNotFoundException.class);
     }
     
     private Movie createTestMovie(String name) {
