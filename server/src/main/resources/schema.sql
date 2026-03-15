@@ -40,9 +40,10 @@ CREATE TABLE users (
     id         BIGINT AUTO_INCREMENT PRIMARY KEY, -- User 객체의 Long id
     user_name  VARCHAR(100) NOT NULL UNIQUE,      -- String userName (중복 방지 UNIQUE 추가)
     password   VARCHAR(255) NOT NULL,             -- String password (암호화 대비 길게 설정)
+    email       VARCHAR(255) NOT NULL UNIQUE,
     role       VARCHAR(20) NOT NULL,              -- Role Enum (USER, ADMIN 등 문자열 저장)
     deleted    BOOLEAN DEFAULT FALSE,     -- 0: 활동중, 1: 탈퇴 (논리 삭제 플래그)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- 가입 시간 (추천)
+    created_at TIMESTAMP NOT NULL -- 가입 시간 (추천)
 );
 
 CREATE TABLE reviews (

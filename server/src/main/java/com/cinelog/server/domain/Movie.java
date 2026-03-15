@@ -60,7 +60,7 @@ public class Movie{
         }
         
         if (!actors.remove(actor)) {
-        throw new IllegalArgumentException("영화에 존재하지 않는 배우입니다.");
+        throw new IllegalStateException("영화에 존재하지 않는 배우입니다.");
         }
     }
     public void updateRating(Double rating){
