@@ -1,16 +1,16 @@
-package com.cinelog.server.exception.security;
- 
+package com.cinelog.server.exception.user;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.cinelog.server.global.error.BusinessException;
 import com.cinelog.server.global.error.ErrorCode;
 
-public class InvalidPasswordException extends BusinessException {
-    public InvalidPasswordException(ErrorCode errorCode) {
+public class DuplicateException extends BusinessException {
+    public DuplicateException(ErrorCode errorCode) {
         super(errorCode);
     }
-    public InvalidPasswordException(ErrorCode errorCode,String message) {
+    public DuplicateException(ErrorCode errorCode,String message) {
         super(errorCode,message);
     }
-} 
+}
